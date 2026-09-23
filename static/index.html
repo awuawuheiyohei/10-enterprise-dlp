@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise DLP Engine</title>
+<style>
+:root {
+  --bg: #0f1419; --panel: #1a2028; --panel2: #232a36; --border: #2f3845;
+  --text: #e6edf3; --text-dim: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --yellow: #d29922; --orange: #f0883e; --red: #f85149;
+  --critical: #f85149; --high: #f0883e; --medium: #d29922; --low: #3fb950;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.55; }
+.topbar { background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+  padding: 16px 32px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; }
+.topbar h1 { font-size: 18px; font-weight: 600; }
+.topbar .meta { font-size: 12px; color: var(--text-dim); }
+.container { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; }
+.card .label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 28px; font-weight: 700; margin-top: 8px; }
+.card .sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.card.critical .value { color: var(--critical); }
+.card.success .value { color: var(--green); }
+.card.info .value { color: var(--accent); }
+.section { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+.section .header { padding: 14px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; }
+.section .header h2 { font-size: 14px; font-weight: 600; }
+.section .body { padding: 16px 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table th, table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+table th { color: var(--text-dim); font-weight: 500; font-size: 11px; text-transform: uppercase; }
+table tr:hover td { background: var(--panel2); }
+table td.mono { font-family: "SF Mono", Menlo, monospace; font-size: 12px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.tag.critical { background: rgba(248,81,73,0.15); color: var(--critical); border: 1px solid rgba(248,81,73,0.4); }
+.tag.high { background: rgba(240,136,62,0.15); color: var(--high); border: 1px solid rgba(240,136,62,0.4); }
+.tag.medium { background: rgba(210,153,34,0.15); color: var(--medium); border: 1px solid rgba(210,153,34,0.4); }
+.tag.low { background: rgba(63,185,80,0.15); color: var(--low); border: 1px solid rgba(63,185,80,0.4); }
+.tag.normal { background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid rgba(88,166,255,0.4); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); padding: 0 20px; background: var(--panel); }
+.tab { padding: 10px 16px; font-size: 13px; cursor: pointer; border: none; background: transparent; color: var(--text-dim); border-bottom: 2px solid transparent; }
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--text); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; padding: 16px 20px; }
+.form-item { display: flex; flex-direction: column; margin-bottom: 12px; }
+.form-item label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+.form-item input, .form-item select, .form-item textarea {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 10px; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.form-item textarea { min-height: 120px; resize: vertical; font-family: "SF Mono", Menlo, monospace; font-size: 12px; }
+.btn { background: var(--accent); color: #0d1117; border: none; padding: 8px 16px;
+  border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 13px; }
+.btn:hover { background: #79b8ff; }
+.btn.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+.result-box { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 12px; margin-top: 12px; font-family: "SF Mono", Menlo, monospace;
+  font-size: 12px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+.snippet-pill { background: var(--panel2); border-left: 3px solid var(--accent); padding: 6px 10px;
+  border-radius: 3px; margin: 4px 0; font-family: "SF Mono", Menlo, monospace; font-size: 11px; }
+.snippet-pill .meta { color: var(--text-dim); font-size: 10px; margin-bottom: 2px; }
+.filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.filter-bar select { background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+.empty { color: var(--text-dim); font-style: italic; padding: 12px 0; }
+.detect-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 12px 0; }
+.detect-stat { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 10px 14px; text-align: center; }
+.detect-stat .lab { font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
+.detect-stat .val { font-size: 20px; font-weight: 700; margin-top: 4px; }
+pre.code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 10px; font-family: "SF Mono", Menlo, monospace; font-size: 11px;
+  white-space: pre-wrap; max-height: 250px; overflow-y: auto; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>🛡️ Enterprise DLP Engine</h1>
+  <div class="meta">
+    <span>4 级分类分级 · 9 检测器 · 多通道</span>
+    · <a href="/docs" style="color:var(--accent)">API Docs</a>
+    · <a href="/health" style="color:var(--accent)">Health</a>
+  </div>
+</div>
+
+<div class="container">
+  <!-- 4 metric cards -->
+  <div class="cards">
+    <div class="card info">
+      <div class="label">启用规则</div>
+      <div class="value" id="m-rules">—</div>
+      <div class="sub">9 检测器 / 4 分类</div>
+    </div>
+    <div class="card critical">
+      <div class="label">CRITICAL Incident</div>
+      <div class="value" id="m-critical">—</div>
+      <div class="sub"><span id="m-incidents">—</span> 总事件</div>
+    </div>
+    <div class="card success">
+      <div class="label">已 BLOCK</div>
+      <div class="value" id="m-blocked">—</div>
+      <div class="sub">RESTRICTED 自动拦截</div>
+    </div>
+    <div class="card">
+      <div class="label">ServiceNow Tickets</div>
+      <div class="value" id="m-sn">—</div>
+      <div class="sub"><span id="m-sn-new">—</span> NEW 待处理</div>
+    </div>
+  </div>
+
+  <div class="section" style="padding:0">
+    <div class="tabs">
+      <button class="tab active" data-tab="detect">🔍 实时检测</button>
+      <button class="tab" data-tab="rules">📋 规则库</button>
+      <button class="tab" data-tab="incidents">🚨 事件列表</button>
+      <button class="tab" data-tab="servicenow">🎫 ServiceNow</button>
+    </div>
+
+    <!-- Tab: Detect -->
+    <div class="tab-panel active" data-tab="detect">
+      <div class="body">
+        <div class="form-item">
+          <label>输入待检测文本（邮件 / Slack / 文件内容 / API payload）</label>
+          <textarea id="d-text" placeholder="粘贴待检测的文本，例如：&#10;Customer card 4532-0151-1283-0366&#10;AWS key: AKIAIOSFODNN7EXAMPLE&#10;身份证 11010519491231002X">Customer card 4532-0151-1283-0366
+AWS key: AKIAIOSFODNN7EXAMPLE
+身份证 11010519491231002X</textarea>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-end">
+          <div class="form-item" style="margin-bottom:0;flex:1">
+            <label>出站通道</label>
+            <select id="d-channel">
+              <option value="ENDPOINT_USB">ENDPOINT_USB (USB 拷贝)</option>
+              <option value="OUTBOUND_EMAIL">OUTBOUND_EMAIL (外发邮件)</option>
+              <option value="WEB_UPLOAD" selected>WEB_UPLOAD (Slack / 网盘)</option>
+              <option value="API_EGRESS">API_EGRESS (API 出口)</option>
+            </select>
+          </div>
+          <div class="form-item" style="margin-bottom:0;flex:1">
+            <label>Actor</label>
+            <input id="d-actor" value="employee@tripbiz.com">
+          </div>
+          <div class="form-item" style="margin-bottom:0;flex:1">
+            <label>Source label</label>
+            <input id="d-source" value="manual_test">
+          </div>
+          <button class="btn" id="btn-detect">🔍 执行检测</button>
+        </div>
+        <div id="d-output"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Rules -->
+    <div class="tab-panel" data-tab="rules">
+      <div class="body">
+        <div class="filter-bar">
+          <label>分类</label>
+          <select id="r-class">
+            <option value="">全部</option>
+            <option>PUBLIC</option><option>INTERNAL</option>
+            <option>CONFIDENTIAL</option><option>RESTRICTED</option>
+          </select>
+          <span style="color:var(--text-dim);font-size:11px" id="r-count">—</span>
+        </div>
+        <table id="tbl-rules">
+          <thead>
+            <tr>
+              <th>Rule ID</th><th>名称</th><th>分类</th>
+              <th>检测器</th><th>阈值</th><th>通道动作</th><th>启用</th>
+            </tr>
+          </thead>
+          <tbody><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Incidents -->
+    <div class="tab-panel" data-tab="incidents">
+      <div class="body">
+        <div class="filter-bar">
+          <label>Severity</label>
+          <select id="i-sev"><option value="">全部</option>
+            <option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
+          <label>Channel</label>
+          <select id="i-channel"><option value="">全部</option>
+            <option>ENDPOINT_USB</option><option>OUTBOUND_EMAIL</option>
+            <option>WEB_UPLOAD</option><option>API_EGRESS</option></select>
+          <span style="color:var(--text-dim);font-size:11px" id="i-count">—</span>
+        </div>
+        <table id="tbl-incidents">
+          <thead>
+            <tr>
+              <th>Incident</th><th>Channel</th><th>Source</th><th>Actor</th>
+              <th>Severity</th><th>Classification</th>
+              <th>Action</th><th>Matches</th><th>SN</th><th>Created</th>
+            </tr>
+          </thead>
+          <tbody><tr><td colspan="10" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: ServiceNow -->
+    <div class="tab-panel" data-tab="servicenow">
+      <div class="body">
+        <div class="filter-bar">
+          <label>Priority</label>
+          <select id="sn-prio"><option value="">全部</option>
+            <option>P1</option><option>P2</option><option>P3</option></select>
+          <label>State</label>
+          <select id="sn-state"><option value="">全部</option>
+            <option>NEW</option><option>IN_PROGRESS</option><option>RESOLVED</option></select>
+          <span style="color:var(--text-dim);font-size:11px" id="sn-count">—</span>
+        </div>
+        <table id="tbl-sn">
+          <thead>
+            <tr>
+              <th>Ticket</th><th>Priority</th><th>Incident</th>
+              <th>Description</th><th>Assignment</th>
+              <th>SLA Target</th><th>State</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// Tab switcher
+// ============================================
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`.tab-panel[data-tab="${btn.dataset.tab}"]`).classList.add('active');
+    if (btn.dataset.tab === 'rules') loadRules();
+    if (btn.dataset.tab === 'incidents') loadIncidents();
+    if (btn.dataset.tab === 'servicenow') loadSN();
+  });
+});
+
+async function fetchJSON(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(`${r.status}: ${await r.text()}`);
+  return await r.json();
+}
+function tag(text, cls) { return `<span class="tag ${cls}">${text}</span>`; }
+function sevTag(s) {
+  const m = {CRITICAL:'critical', HIGH:'high', MEDIUM:'medium', LOW:'low'};
+  return tag(s, m[s] || 'normal');
+}
+function classTag(c) {
+  const m = {RESTRICTED:'critical', CONFIDENTIAL:'high', INTERNAL:'medium', PUBLIC:'low'};
+  return tag(c, m[c] || 'normal');
+}
+
+// ============================================
+// Summary
+// ============================================
+async function loadSummary() {
+  try {
+    const s = await fetchJSON('/api/dashboard/summary');
+    document.getElementById('m-rules').textContent = s.rules_enabled;
+    document.getElementById('m-incidents').textContent = s.incidents_total;
+    const crit = s.by_severity.find(x => x.severity === 'CRITICAL');
+    document.getElementById('m-critical').textContent = crit ? crit.cnt : 0;
+    document.getElementById('m-blocked').textContent = s.blocked_count;
+    document.getElementById('m-sn').textContent = s.servicenow.total;
+    document.getElementById('m-sn-new').textContent = s.servicenow.new;
+  } catch(e) { console.error('summary:', e); }
+}
+
+// ============================================
+// Detect
+// ============================================
+document.getElementById('btn-detect').addEventListener('click', async () => {
+  const text = document.getElementById('d-text').value;
+  if (!text.trim()) return;
+  const channel = document.getElementById('d-channel').value;
+  const actor = document.getElementById('d-actor').value;
+  const source_label = document.getElementById('d-source').value;
+  const out = document.getElementById('d-output');
+  out.innerHTML = '<div class="empty">检测中…</div>';
+  try {
+    const r = await fetchJSON('/api/detect', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text, channel, actor, source_label, record: true})
+    });
+    const res = r.result;
+    out.innerHTML = `
+      <div class="detect-summary">
+        <div class="detect-stat"><div class="lab">分类</div><div class="val">${classTag(res.classification)}</div></div>
+        <div class="detect-stat"><div class="lab">严重度</div><div class="val">${sevTag(res.severity)}</div></div>
+        <div class="detect-stat"><div class="lab">动作</div><div class="val" style="color:${res.action_taken==='BLOCK'?'var(--critical)':'var(--accent)'}">${res.action_taken}</div></div>
+        <div class="detect-stat"><div class="lab">命中数</div><div class="val">${res.total_matches}</div></div>
+      </div>
+      <h4 style="font-size:13px;margin:16px 0 8px;color:var(--text-dim)">📎 命中 Snippet（脱敏）</h4>
+      ${res.snippets.length ? res.snippets.map(sn => `
+        <div class="snippet-pill">
+          <div class="meta">${sn.rule_id} · ${sn.category} · ${sn.classification} · 长度 ${sn.value_length}</div>
+          <div>${sn.value_masked}</div>
+        </div>
+      `).join('') : '<div class="empty">无命中</div>'}
+      ${r.servicenow_ticket ? `
+        <h4 style="font-size:13px;margin:16px 0 8px;color:var(--text-dim)">🎫 ServiceNow Ticket（Mock）</h4>
+        <pre class="code">${JSON.stringify(r.servicenow_ticket.payload_json, null, 2)}</pre>
+      ` : ''}
+      <h4 style="font-size:13px;margin:16px 0 8px;color:var(--text-dim)">📡 SIEM CEF Event</h4>
+      <pre class="code">${r.cef_event}</pre>
+    `;
+    loadSummary();
+    loadIncidents();
+    loadSN();
+  } catch(e) {
+    out.innerHTML = `<div class="empty" style="color:var(--critical)">Error: ${e.message}</div>`;
+  }
+});
+
+// ============================================
+// Rules
+// ============================================
+async function loadRules() {
+  const classification = document.getElementById('r-class').value;
+  const params = new URLSearchParams();
+  if (classification) params.set('classification', classification);
+  try {
+    const d = await fetchJSON('/api/rules?' + params);
+    document.getElementById('r-count').textContent = `${d.count} 条`;
+    const tbody = document.querySelector('#tbl-rules tbody');
+    if (!d.items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">无匹配</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.items.map(r => {
+      const ca = r.channel_actions || {};
+      const caText = Object.entries(ca).map(([ch, act]) => `${ch}=${act}`).join(', ');
+      return `<tr>
+        <td class="mono">${r.rule_id}</td>
+        <td>${r.rule_name}</td>
+        <td>${classTag(r.classification)}</td>
+        <td class="mono" style="font-size:11px">${r.detector_type}</td>
+        <td style="text-align:center">${r.match_threshold}</td>
+        <td style="font-size:10px;color:var(--text-dim)">${caText}</td>
+        <td>${r.enabled ? tag('ON','low') : tag('OFF','normal')}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error('rules:', e); }
+}
+document.getElementById('r-class').addEventListener('change', loadRules);
+
+// ============================================
+// Incidents
+// ============================================
+async function loadIncidents() {
+  const severity = document.getElementById('i-sev').value;
+  const channel = document.getElementById('i-channel').value;
+  const params = new URLSearchParams();
+  if (severity) params.set('severity', severity);
+  if (channel) params.set('channel', channel);
+  params.set('limit', '100');
+  try {
+    const d = await fetchJSON('/api/incidents?' + params);
+    document.getElementById('i-count').textContent = `${d.count} 条`;
+    const tbody = document.querySelector('#tbl-incidents tbody');
+    if (!d.items.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="empty">暂无事件</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.items.map(it => {
+      const rules = Object.keys(it.matched_rules || {});
+      return `<tr>
+        <td class="mono">${it.incident_id}</td>
+        <td style="font-size:11px">${it.channel}</td>
+        <td style="font-size:11px;color:var(--text-dim)">${it.source_label||''}</td>
+        <td style="font-size:11px;color:var(--text-dim)">${it.actor||''}</td>
+        <td>${sevTag(it.severity)}</td>
+        <td>${classTag(it.classification)}</td>
+        <td>${sevTag(it.action_taken)}</td>
+        <td style="text-align:center;font-size:11px" title="${rules.join(', ')}">${it.total_matches} (${rules.length})</td>
+        <td style="font-size:11px">${it.servicenow_ticket_id||'—'}</td>
+        <td style="font-size:11px;color:var(--text-dim)">${it.created_at}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error('incidents:', e); }
+}
+document.getElementById('i-sev').addEventListener('change', loadIncidents);
+document.getElementById('i-channel').addEventListener('change', loadIncidents);
+
+// ============================================
+// ServiceNow
+// ============================================
+async function loadSN() {
+  const priority = document.getElementById('sn-prio').value;
+  const state = document.getElementById('sn-state').value;
+  const params = new URLSearchParams();
+  if (priority) params.set('priority', priority);
+  if (state) params.set('state', state);
+  try {
+    const d = await fetchJSON('/api/servicenow/tickets?' + params);
+    document.getElementById('sn-count').textContent = `${d.count} 条`;
+    const tbody = document.querySelector('#tbl-sn tbody');
+    if (!d.items.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无工单</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.items.map(t => {
+      const btn = t.state === 'NEW'
+        ? `<button class="btn secondary" onclick="resolveSN('${t.ticket_id}')">标记 RESOLVED</button>`
+        : `<span style="color:var(--text-dim);font-size:11px">${t.state}</span>`;
+      return `<tr>
+        <td class="mono">${t.ticket_id}</td>
+        <td>${sevTag(t.priority)}</td>
+        <td class="mono">${t.incident_id}</td>
+        <td style="font-size:11px">${t.short_description}</td>
+        <td style="font-size:11px;color:var(--text-dim)">${t.assignment_group}</td>
+        <td style="font-size:11px;color:var(--text-dim)">${t.sla_target}</td>
+        <td>${sevTag(t.state)}</td>
+        <td>${btn}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error('sn:', e); }
+}
+async function resolveSN(tid) {
+  try {
+    await fetchJSON(`/api/servicenow/tickets/${tid}/resolve`, {method:'POST'});
+    loadSN(); loadSummary();
+  } catch(e) { alert('Resolve 失败: ' + e.message); }
+}
+document.getElementById('sn-prio').addEventListener('change', loadSN);
+document.getElementById('sn-state').addEventListener('change', loadSN);
+
+// Init
+loadSummary();
+</script>
+</body>
+</html>
